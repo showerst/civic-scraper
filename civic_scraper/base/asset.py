@@ -2,7 +2,9 @@ import csv
 import datetime
 import mimetypes
 import os
+import json
 from pathlib import Path
+from openstates.scrape import Event
 
 import requests
 
