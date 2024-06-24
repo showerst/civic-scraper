@@ -5,3 +5,4 @@ feedparser
 requests
 scraper-legistar
 demjson3
+openstates

@@ -2,7 +2,9 @@ import csv
 import datetime
 import mimetypes
 import os
+import json
 from pathlib import Path
+from openstates.scrape import Event
 
 import requests
 
@@ -90,6 +92,47 @@ class Asset:
 
 
 class AssetCollection(list):
+
+    def to_os(self, target_dir):
+        rows = [asset.__dict__ for asset in self]
+        events = {}
+        for row in rows:
+            print(row)
+            if row["meeting_id"] in events:
+                event = events[row["meeting_id"]]
+            else:
+                if row['meeting_time']:
+                    event_day = row['meeting_date'].strftime("%Y-%m-%d")
+                    event_time = row['meeting_time'].strftime("%H:%M:%S")
+                    event_date = f"{event_day} {event_time}"
+                else:
+                    event_date = row["meeting_date"].strftime("%Y-%m-%d")
+                event = Event(
+                    name=row['asset_name'], location_name=row['place'], start_date=event_date
+                )
+
+            event.add_document(row["asset_type"], row["url"], media_type=row["content_type"], on_duplicate="ignore")
+
+            if row["committee_name"]:
+                event.add_participant(
+                    row["committee_name"],
+                    type="committee",
+                    note="host",
+                )
+            
+            event.extras["meeting_id"] = row["meeting_id"]
+            events[row["meeting_id"]] = event
+                
+            print(event)
+            print(event.extras["meeting_id"])
+
+        for key in events:
+            event = events[key]
+            fname = f"{target_dir}/{event.extras['meeting_id']}.json"
+            with open(fname, "w") as outfile:
+                json.dump(event.as_dict(), outfile)
+        return events
+
     def to_csv(self, target_dir):
         """
         Write metadata about the asset list to a csv.
